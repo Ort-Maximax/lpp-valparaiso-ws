@@ -6,17 +6,22 @@ from pathlib import Path
 from flask import Flask
 from flask import request
 
+import ffmpeg
+
 ########## CONST ##########
 APP_CONF_HOST = 'HOST'
 APP_CONF_PORT = 'PORT'
 APP_CONF_SECTION = 'app_flask'
 CONF_FILE = 'app.ini'
 
+FFMPEG_METHOD_HFLIP = 'hflip'
+
 FLASK_DEFAULT_HOST = 'localhost'
 FLASK_DEFAULT_PORT = 5000
 
 JSON_METHOD = 'method'
-JSON_PATH = 'path'
+JSON_INPUT = 'input'
+JSON_OUTPUT = 'output'
 
 
 ########## CONFIG ##########
@@ -44,16 +49,33 @@ if checkConfig(config):
 
 
 ########## FFMPEG ##########
-def checkJSON(json):
+def consumeJSON(json):
 	if (json and json != ''):
 		content = request.get_json()
-		if (content[JSON_METHOD] and content[JSON_PATH]):
+		if (content[JSON_METHOD] and content[JSON_INPUT]):
 			method = content[JSON_METHOD]
-			path = content[JSON_PATH]
+			path = content[JSON_INPUT]
+			output = content[JSON_OUTPUT] if content[JSON_OUTPUT] else path
+			file = Path(path)
+			if not file.is_file():
+				return 'Erreur : Le fichier spécifié "%s" n\'existe pas !\n' % path
+			executeFfmpegMethod(method, path, output)
+
 			return 'Succès : La méthode "%s" a été appliquée au fichier "%s".\n' % (method, path)
-		return 'Erreur : Les champs "%s" et "%s" sont attendus dans le JSON !\n' % (JSON_METHOD, JSON_PATH)
+
+		return 'Erreur : Les champs "%s" et "%s" sont attendus dans le JSON !\n' % (JSON_METHOD, JSON_INPUT)
+
 	return 'Erreur : Un JSON est attendu...\n'
 
+def executeFfmpegMethod(method, inputFile, outputPath):
+	if method == FFMPEG_METHOD_HFLIP:
+		(
+			ffmpeg
+			.input(inputFile)
+			.hflip()
+			.output(outputPath)
+			.run()
+		)
 
 
 ########## FLASK APP ##########
@@ -65,7 +87,7 @@ def indexAction():
 
 @app.route('/ffmpeg', methods=['POST'])
 def ffmpegAction():
-	return checkJSON(request.get_json())		
+	return consumeJSON(request.get_json())		
 
 if __name__ == '__main__':
 	app.run(debug=True, host=app_host, port=app_port)
