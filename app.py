@@ -14,7 +14,9 @@ APP_CONF_PORT = 'PORT'
 APP_CONF_SECTION = 'app_flask'
 CONF_FILE = 'app.ini'
 
+FFMPEG_METHOD_CONVERT_MP4_H264 = 'convert_mp4_h264'
 FFMPEG_METHOD_HFLIP = 'hflip'
+FFMPEG_METHOD_VFLIP = 'vflip'
 
 FLASK_DEFAULT_HOST = 'localhost'
 FLASK_DEFAULT_PORT = 5000
@@ -59,7 +61,9 @@ def consumeJSON(json):
 			file = Path(path)
 			if not file.is_file():
 				return 'Erreur : Le fichier spécifié "%s" n\'existe pas !\n' % path
-			executeFfmpegMethod(method, path, output)
+			err = executeFfmpegMethod(method, path, output)
+			if err and err != '':
+				return 'Erreur : %s\n' % err
 
 			return 'Succès : La méthode "%s" a été appliquée au fichier "%s".\n' % (method, path)
 
@@ -68,14 +72,31 @@ def consumeJSON(json):
 	return 'Erreur : Un JSON est attendu...\n'
 
 def executeFfmpegMethod(method, inputFile, outputPath):
+	err = ''
+	if method == FFMPEG_METHOD_CONVERT_MP4_H264:
+		out, err = (
+			ffmpeg
+			.input(inputFile)
+			.output(outputPath, vcodec='libx264', format='mp4', pix_fmt='yuv420p10')
+			.run(overwrite_output=True)
+		)
+	if method == FFMPEG_METHOD_VFLIP:
+		out, err = (
+			ffmpeg
+			.input(inputFile)
+			.vflip()
+			.output(outputPath)
+			.run(overwrite_output=True)
+		)
 	if method == FFMPEG_METHOD_HFLIP:
-		(
+		out, err = (
 			ffmpeg
 			.input(inputFile)
 			.hflip()
 			.output(outputPath)
-			.run()
+			.run(overwrite_output=True)
 		)
+	return err
 
 
 ########## FLASK APP ##########
