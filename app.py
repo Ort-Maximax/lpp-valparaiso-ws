@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import configparser
+import json
 from pathlib import Path
 
 from flask import Flask
@@ -53,11 +54,13 @@ if checkConfig(config):
 ########## FFMPEG ##########
 def consumeJSON(json):
 	if (json and json != ''):
-		content = request.get_json()
-		if (content[JSON_METHOD] and content[JSON_INPUT]):
-			method = content[JSON_METHOD]
-			path = content[JSON_INPUT]
-			output = content[JSON_OUTPUT] if content[JSON_OUTPUT] else path
+		if (json[JSON_METHOD] and json[JSON_INPUT]):
+			method = json[JSON_METHOD]
+			print('METHOD: ' + method)
+			path = json[JSON_INPUT]
+			print('PATH: ' + path)
+			output = json[JSON_OUTPUT] if json[JSON_OUTPUT] else path
+			print('OUTPUT: ' + output)
 			file = Path(path)
 			if not file.is_file():
 				return 'Erreur : Le fichier spécifié "%s" n\'existe pas !\n' % path
@@ -108,7 +111,8 @@ def indexAction():
 
 @app.route('/ffmpeg', methods=['POST'])
 def ffmpegAction():
-	return consumeJSON(request.get_json())		
+	json_data = json.loads(request.data)
+	return consumeJSON(json_data)		
 
 if __name__ == '__main__':
 	app.run(debug=True, host=app_host, port=app_port)
