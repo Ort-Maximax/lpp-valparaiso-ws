@@ -9,17 +9,25 @@ from flask import request
 import ffmpeg
 
 ########## CONST ##########
+APP_CONF_DEBUG = 'DEBUG'
 APP_CONF_HOST = 'HOST'
 APP_CONF_PORT = 'PORT'
 APP_CONF_SECTION = 'app_flask'
+APP_ROUTING_BASE = 'BASE'
+APP_ROUTING_WS = 'WS'
+APP_ROUTING_SECTION = 'routing'
 CONF_FILE = 'app.ini'
 
 FFMPEG_METHOD_CONVERT_MP4_H264 = 'convert_mp4_h264'
 FFMPEG_METHOD_HFLIP = 'hflip'
 FFMPEG_METHOD_VFLIP = 'vflip'
 
+FLASK_DEFAULT_DEBUG = True
 FLASK_DEFAULT_HOST = 'localhost'
 FLASK_DEFAULT_PORT = 5000
+
+ROUTING_DEFAULT_BASE = '/'
+ROUTING_DEFAULT_WS = '/ffmpeg'
 
 JSON_METHOD = 'method'
 JSON_INPUT = 'input'
@@ -40,14 +48,19 @@ def getConfParamFromSection(config, conf_section, conf_param):
 		return config[conf_section][conf_param]
 	return False
 
-##### APP CONFIG
+##### APP + ROUTING CONFIG
 config = configparser.ConfigParser()
 app_host = FLASK_DEFAULT_HOST
 app_port = FLASK_DEFAULT_PORT
+app_debug = FLASK_DEFAULT_DEBUG
+routing_base = ROUTING_DEFAULT_BASE
+routing_ws = ROUTING_DEFAULT_WS
 if checkConfig(config):
 	app_host = getConfParamFromSection(config, APP_CONF_SECTION, APP_CONF_HOST) if getConfParamFromSection(config, APP_CONF_SECTION, APP_CONF_HOST) else FLASK_DEFAULT_HOST
 	app_port = int(getConfParamFromSection(config, APP_CONF_SECTION, APP_CONF_PORT)) if getConfParamFromSection(config, APP_CONF_SECTION, APP_CONF_PORT) else FLASK_DEFAULT_PORT
-
+	app_debug = getConfParamFromSection(config, APP_CONF_SECTION, APP_CONF_DEBUG) if getConfParamFromSection(config, APP_CONF_SECTION, APP_CONF_DEBUG) else FLASK_DEFAULT_DEBUG
+	routing_base = getConfParamFromSection(config, APP_ROUTING_SECTION, APP_ROUTING_BASE) if getConfParamFromSection(config, APP_ROUTING_SECTION, APP_ROUTING_BASE) else ROUTING_DEFAULT_BASE
+	routing_ws = getConfParamFromSection(config, APP_ROUTING_SECTION, APP_ROUTING_WS) if getConfParamFromSection(config, APP_ROUTING_SECTION, APP_ROUTING_WS) else ROUTING_DEFAULT_WS
 
 
 ########## FFMPEG ##########
@@ -102,13 +115,13 @@ def executeFfmpegMethod(method, inputFile, outputPath):
 ########## FLASK APP ##########
 app = Flask(__name__)
 
-@app.route('/')
+@app.route(routing_base)
 def indexAction():
 	return 'Bienvenue sur Valparaiso - FFMPEG Web Service\n'
 
-@app.route('/ffmpeg', methods=['POST'])
+@app.route(routing_ws, methods=['POST'])
 def ffmpegAction():
 	return consumeJSON(request.get_json())		
 
 if __name__ == '__main__':
-	app.run(debug=True, host=app_host, port=app_port)
+	app.run(debug=app_debug, host=app_host, port=app_port)
